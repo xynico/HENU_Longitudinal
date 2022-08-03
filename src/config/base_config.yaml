@@ -1,0 +1,15 @@
+DATASET:
+  BEHAVIOR:
+    final_file_path: final.xlsx
+    midterm_file_path: midterm.xlsx
+    social_network_file_path: Social_network_V2.xlsx
+  EEG:
+    preload: False
+
+
+
+PREPROCESSING:
+  FILTER:
+    hp: 1
+    lp: 1
+  
