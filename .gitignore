@@ -1,2 +1,3 @@
-/data/eeg_data
+/data/eeg_data/final
+/data/eeg_data/midterm
 /src/__pycache__
