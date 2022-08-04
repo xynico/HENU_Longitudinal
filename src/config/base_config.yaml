@@ -5,7 +5,7 @@ DATASET:
     social_network_file_path: Social_network_V2.xlsx
   EEG:
     preload: False
-
+    check_data: auto #auto or manually set a list of subj id
 
 
 PREPROCESSING:
