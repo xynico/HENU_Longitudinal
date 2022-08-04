@@ -1,3 +1,5 @@
+GLOBAL:
+  seed: &seed 42
 DATASET:
   BEHAVIOR:
     final_file_path: final.xlsx
@@ -12,10 +14,34 @@ PROCESSING:
   PREPROCESSING:
     DO: True
     SAVE_PATH: /data/xiaowei/social_network/HENU/preprocessing
+    n_jobs: -1
+    CHANNEL:
+      montageName: /data/xiaowei/social_network/HENU/data/standard-10-5-cap385.elp
+      channelTypes: {}
+      dropChannel: [IO,]
+      mapping: {}
+    CROP:
+      DO: True
+      tmin: 30
+      tmax: 330
+    RESAMPLE:
+      DO: False
+      sfreq: 500
     FILTER:
       DO: True
       hp: 1
       lp: 40
+    NOTCH_FILTER:
+      DO: False
+      freq: 50
+    EPOCH:
+      DurationTime: 2
+      MarkName: T
     ICA:
+      DO: True
+      seed: *seed
+    REJECT:
+      DO: True
+
       
     

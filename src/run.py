@@ -14,9 +14,8 @@ def main():
     args = parser.parse_args()
     config = load_config(config_path = args.cfg)
     dataset = SNDataset(config,args)
-    if config['PROCESSING']['PREPROCESSING']['DO']:
-        preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
-    
+    preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
+
 
 
 
