@@ -20,7 +20,6 @@ class SNDataset():
         self.get_eeg_config()
         self.check_data()
 
-
     def get_eeg_config(self):
         self.eeg_data = {'final':{'eye_close':{},'eye_open':{}},'midterm':{'eye_close':{},'eye_open':{}}}
         for term in self.eeg_data_path.keys():
@@ -68,7 +67,7 @@ class SNDataset():
         else:
             raise ValueError('check_data must be either "auto" or list')
         print(f'{len(self.used_id)} subjects are used in the dataset')
-        
+
     def get_behavior_data(self):
 
         social_network_file = self.config['DATASET']['BEHAVIOR']['social_network_file_path']

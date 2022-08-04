@@ -8,8 +8,14 @@ DATASET:
     check_data: auto #auto or manually set a list of subj id
 
 
-PREPROCESSING:
-  FILTER:
-    hp: 1
-    lp: 1
-  
+PROCESSING:
+  PREPROCESSING:
+    DO: True
+    SAVE_PATH: /data/xiaowei/social_network/HENU/preprocessing
+    FILTER:
+      DO: True
+      hp: 1
+      lp: 40
+    ICA:
+      
+    
