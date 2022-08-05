@@ -14,7 +14,8 @@ def main():
     args = parser.parse_args()
     config = load_config(config_path = args.cfg)
     dataset = SNDataset(config,args)
-    preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
+    folder_name = preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
+    feature_extraction_loop(folder_name,dataset,config['PROCESSING']['FEATURE_EXTRACTION'])
 
 
 

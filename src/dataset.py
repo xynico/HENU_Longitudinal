@@ -91,10 +91,21 @@ class SNDataset():
                             self.eeg_data_path[term][event[:-1]][subj_id] = [os.path.join(self.args.eeg_data_path,term,subj_class,event,subj_id,subj_id+'.vhdr')]
                         else:
                             self.eeg_data_path[term][event[:-1]][subj_id].append(os.path.join(self.args.eeg_data_path,term,subj_class,event,subj_id,subj_id+'.vhdr'))
-
+        
         # TODO: ordered by event[-1]
     
+class EpochDataset():
     
+    def __init__(self,raw_dataset,config):
+        self.features = {}
+        for term in ['final','midterm']:
+            for event in raw_dataset[term].keys():
+                for subj_id in tqdm(raw_dataset.used_id,desc=f'Loading Epoch dataset {term}_{event}'):
+                    for i in range(2):
+                        if config['PROCESSING']['Feature_Extraction']['PSD']['DO']:
+                            pass
+
+
 
 
                 
