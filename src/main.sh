@@ -1,4 +1,4 @@
-
+PYTHON=/home/xiaowei/miniconda3/envs/bci/bin/python
 
 # config path
 CFG=/data/xiaowei/social_network/HENU/src/config/base_config.yaml

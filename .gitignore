@@ -2,4 +2,5 @@
 /data/eeg_data/midterm
 /src/__pycache__
 /preprocessing
-/neural_features
+/EEG_features
+/EEG_SN

@@ -16,7 +16,7 @@ def main():
     dataset = SNDataset(config,args)
     folder_name = preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
     feature_extraction_loop(folder_name,dataset,config['PROCESSING']['FEATURE_EXTRACTION'])
-
+    social_network_loop(folder_name,dataset,config['PROCESSING']['SOCIAL_NETWORK'])
 
 
 

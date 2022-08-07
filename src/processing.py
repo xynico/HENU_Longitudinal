@@ -36,8 +36,8 @@ def preprocessing_loop(dataset,config):
                             else:
                                     epoch = loadpkl(os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_{i}_epoch.pkl'))
                         epoch_list.append(epoch)
-                        epoch_concat = mne.concatenate_epochs(epoch_list,verbose = 'ERROR')
-                        savepkl(epoch_list,os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_epoch_concat.pkl'))
+                    epoch_concat = mne.concatenate_epochs(epoch_list,verbose = 'ERROR')
+                    savepkl(epoch_concat,os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_epoch_concat.pkl'))
                 
     return folder_name
 
@@ -88,21 +88,62 @@ def feature_extraction_loop(folder_name,dataset,config):
     for term in dataset.eeg_data.keys():
         for event in dataset.eeg_data[term].keys():
             for subj_id in  tqdm(dataset.used_id,desc = f"feature extraction: {term}_{event}"):
-                epoch = loadpkl(os.path.join(config['EPOCH_PATH'],folder_name,f'{term}_{event}_{subj_id}_epoch_concat.pkl',))
+                
+                
                 if config['PSD']['DO']:
-                    savepkl(
-                        psd(epoch,config), 
-                        os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_{i}_psd.pkl'))
+                    if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_psd.pkl')):
+                        epoch = loadpkl(os.path.join(config['EPOCH_PATH'],folder_name,f'{term}_{event}_{subj_id}_epoch_concat.pkl'))
+                        savepkl(
+                        psd(epoch,config['PSD']), 
+                        os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_psd.pkl'))
                 if config['FUNCTIONALCONNECTIVITY']['DO']:
-                    savepkl(
-                        functional_connectivity(epoch,config), 
-                        os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_{i}_functional_connectivity.pkl'))
+                    if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_functional_connectivity.pkl')):
+                        epoch = loadpkl(os.path.join(config['EPOCH_PATH'],folder_name,f'{term}_{event}_{subj_id}_epoch_concat.pkl'))
+                        savepkl(
+                            functional_connectivity(epoch,config['FUNCTIONALCONNECTIVITY']), 
+                            os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_functional_connectivity.pkl'))
+
+def social_network_loop(folder_name,dataset,config):
+    if config['DO']:
+        feature_dict = {}
+        if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name)): os.makedirs(os.path.join(config['SAVE_PATH'],folder_name))
+        for term in dataset.eeg_data.keys():
+            for event in dataset.eeg_data[term].keys():
+                temp_list = []
+                for subj_id in  tqdm(dataset.used_id,desc = f"social_network: {term}_{event}"):
+                    temp_list.append(social_network(folder_name,config,term,event,subj_id))
+                for method in config['FEATURE'].keys():
+                    feature_array = np.concatenate([f[method] for f in temp_list],axis = 0)
+                    corr = np.corrcoef(feature_array)
+                    print(corr.shape)
+
+
+def social_network(folder_name,config,term,event,subj_id):
+    feature = {}
+    if 'PSD' in config['FEATURE'].keys():
+        psd_array = loadpkl(
+            os.path.join(config['FEATURE']['PSD'],folder_name,f'{term}_{event}_{subj_id}_psd.pkl')
+            ) # ([epoch,channel,psd],psd)
+        feature['PSD'] = np.mean(psd_array[0],axis = 0)
+    return feature
+
+    
+
+                    
                     
 
+
+
+
 def psd(epoch,config): 
-    return mne.time_frequency.psd_multitaper(epoch,verbose = 'ERROR',**config['PSD'])
+    
+    kwargs = config.copy()
+    kwargs.pop('DO')
+    return mne.time_frequency.psd_multitaper(epoch,verbose = 'ERROR',**kwargs)
 
 def functional_connectivity(epoch,config):
-    return spectral_connectivity_epochs(epoch,verbose = 'ERROR',**config['FUNCTIONALCONNECTIVITY'])
+    kwargs = config.copy()
+    kwargs.pop('DO')
+    return spectral_connectivity_epochs(epoch,verbose = 'ERROR',**kwargs)
 
-
+    

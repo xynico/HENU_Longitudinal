@@ -38,15 +38,15 @@ PROCESSING:
       freq: 50
     EPOCH:
       DurationTime: 2
-      MarkName: T
+      MarkName: &event_name T
     ICA:
       DO: True
       seed: *seed
     REJECT:
       DO: True
-  Feature_Extraction:
+  FEATURE_EXTRACTION:
     EPOCH_PATH: *EPOCH_PATH
-    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_features
+    SAVE_PATH: &FEATURE_PATH /data/xiaowei/social_network/HENU/EEG_features
     PSD:
       DO: True
       fmin: *hp
@@ -61,6 +61,12 @@ PROCESSING:
       faverage: True
       n_jobs: *n_jobs
       
+  SOCIAL_NETWORK:
+    DO: True
+    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_SN
+    FEATURE: {'PSD': *FEATURE_PATH}
+    EPOCH_PATH: *EPOCH_PATH 
+
 
       
   BEHAVIOR:
