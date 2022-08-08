@@ -16,7 +16,7 @@ class SNDataset():
         self.config = config
         self.args = args
         self.get_eeg_data_path()
-        self.get_behavior_data()
+        self.get_survey_data()
         self.get_eeg_config()
         self.check_data()
 
@@ -42,13 +42,13 @@ class SNDataset():
             eeg_id = list(self.check['subj_id_eeg'].values())
             self.intersection_eeg_id = reduce(np.intersect1d, eeg_id)
             
-            # behavior data read
-            self.check['subj_id_behavior'] = {}
+            # survey data read
+            self.check['subj_id_survey'] = {}
             # two terms
-            self.check['subj_id_behavior']['final'] = self.final_behavior_data['ID'].to_list()
-            self.check['subj_id_behavior']['midterm'] = self.midterm_behavior_data['ID'].to_list()
-            behavior_id = list(self.check['subj_id_behavior'].values())
-            self.intersection_behavior_id = reduce(np.intersect1d, behavior_id).astype(np.int)
+            self.check['subj_id_survey']['final'] = self.final_survey_data['ID'].to_list()
+            self.check['subj_id_survey']['midterm'] = self.midterm_survey_data['ID'].to_list()
+            survey_id = list(self.check['subj_id_survey'].values())
+            self.intersection_survey_id = reduce(np.intersect1d, survey_id).astype(np.int)
 
             # social network data read
             id_colums = list(self.social_network_data['ID'])
@@ -58,8 +58,8 @@ class SNDataset():
 
             # check 
             self.intersection_eeg_id = np.array(self.intersection_eeg_id,dtype=str)
-            self.intersection_behavior_id = np.array(self.intersection_behavior_id,dtype=str)
-            self.used_id = np.intersect1d(self.intersection_eeg_id,self.intersection_behavior_id)
+            self.intersection_survey_id = np.array(self.intersection_survey_id,dtype=str)
+            self.used_id = np.intersect1d(self.intersection_eeg_id,self.intersection_survey_id)
             
 
         elif type(self.config['DATASET']['EEG']['check_data']) == list:
@@ -68,15 +68,15 @@ class SNDataset():
             raise ValueError('check_data must be either "auto" or list')
         print(f'{len(self.used_id)} subjects are used in the dataset')
 
-    def get_behavior_data(self):
+    def get_survey_data(self):
 
-        social_network_file = self.config['DATASET']['BEHAVIOR']['social_network_file_path']
-        final_file = self.config['DATASET']['BEHAVIOR']['final_file_path']
-        midterm_file = self.config['DATASET']['BEHAVIOR']['midterm_file_path']
+        social_network_file = self.config['DATASET']['SURVEY']['social_network_file_path']
+        final_file = self.config['DATASET']['SURVEY']['final_file_path']
+        midterm_file = self.config['DATASET']['SURVEY']['midterm_file_path']
 
-        self.final_behavior_data = pd.read_excel(os.path.join(self.args.behavior_data_path,final_file))
-        self.midterm_behavior_data = pd.read_excel(os.path.join(self.args.behavior_data_path,midterm_file))
-        self.social_network_data = pd.read_excel(os.path.join(self.args.behavior_data_path,social_network_file))
+        self.final_survey_data = pd.read_excel(os.path.join(self.args.survey_data_path,final_file))
+        self.midterm_survey_data = pd.read_excel(os.path.join(self.args.survey_data_path,midterm_file))
+        self.social_network_data = pd.read_excel(os.path.join(self.args.survey_data_path,social_network_file))
 
     def get_eeg_data_path(self):
         '''
