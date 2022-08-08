@@ -47,12 +47,12 @@ PROCESSING:
   FEATURE_EXTRACTION:
     EPOCH_PATH: *EPOCH_PATH
     SAVE_PATH: &FEATURE_PATH /data/xiaowei/social_network/HENU/EEG_features
-    PSD:
+    PSD: &PSD
       DO: True
       fmin: *hp
       fmax: *lp
       n_jobs: *n_jobs
-    FUNCTIONALCONNECTIVITY:
+    FUNCTIONALCONNECTIVITY: &FUNCTIONALCONNECTIVITY
       DO: True
       method: [coh, cohy, imcoh, plv, ciplv, ppc, pli, wpli, wpli2_debiased]
       sfreq: *o_sfreq
@@ -81,7 +81,7 @@ REGRESSION:
   SURVEY_EEG:
     DO: True
     SURVEY: all # all or a list of any column names in the survey file
-    EEG_FEATURE: ['PSD',]
+    EEG_FEATURE: {'PSD': *PSD, 'FUNCTIONALCONNECTIVITY': *FUNCTIONALCONNECTIVITY}
     EEG_FEATURE_PATH: *FEATURE_PATH
     SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
     n_jobs: *n_jobs

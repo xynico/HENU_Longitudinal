@@ -1,3 +1,4 @@
+from operator import index
 from tabnanny import verbose
 from typing import final
 import torch
@@ -45,8 +46,8 @@ class SNDataset():
             # survey data read
             self.check['subj_id_survey'] = {}
             # two terms
-            self.check['subj_id_survey']['final'] = self.final_survey_data['ID'].to_list()
-            self.check['subj_id_survey']['midterm'] = self.midterm_survey_data['ID'].to_list()
+            self.check['subj_id_survey']['final'] = self.final_survey_data.index.to_list()
+            self.check['subj_id_survey']['midterm'] = self.midterm_survey_data.index.to_list()
             survey_id = list(self.check['subj_id_survey'].values())
             self.intersection_survey_id = reduce(np.intersect1d, survey_id).astype(np.int)
 
@@ -58,6 +59,7 @@ class SNDataset():
 
             # check 
             self.intersection_eeg_id = np.array(self.intersection_eeg_id,dtype=str)
+            # set the Dataframe index as the first column
             self.intersection_survey_id = np.array(self.intersection_survey_id,dtype=str)
             self.used_id = np.intersect1d(self.intersection_eeg_id,self.intersection_survey_id)
             
@@ -74,9 +76,11 @@ class SNDataset():
         final_file = self.config['DATASET']['SURVEY']['final_file_path']
         midterm_file = self.config['DATASET']['SURVEY']['midterm_file_path']
 
-        self.final_survey_data = pd.read_excel(os.path.join(self.args.survey_data_path,final_file))
-        self.midterm_survey_data = pd.read_excel(os.path.join(self.args.survey_data_path,midterm_file))
+        self.final_survey_data = pd.read_excel(os.path.join(self.args.survey_data_path,final_file),index_col='ID')
+        self.midterm_survey_data = pd.read_excel(os.path.join(self.args.survey_data_path,midterm_file),index_col='ID')
         self.social_network_data = pd.read_excel(os.path.join(self.args.survey_data_path,social_network_file))
+        self.final_survey_data.drop(['Unnamed: 0'],axis=1,inplace=True)
+        self.midterm_survey_data.drop(['Unnamed: 0'],axis=1,inplace=True)
 
     def get_eeg_data_path(self):
         '''
@@ -85,8 +89,10 @@ class SNDataset():
         self.eeg_data_path = {'final':{'eye_close':{},'eye_open':{}},'midterm':{'eye_close':{},'eye_open':{}}}
         for term in ['final','midterm']:
             for subj_class in ['even_subj','odd_subj']:
-                for event in os.listdir(os.path.join(self.args.eeg_data_path,term,subj_class)):
-                    for subj_id in os.listdir(os.path.join(self.args.eeg_data_path,term,subj_class,event)):
+                event_list = [f for f in os.listdir(os.path.join(self.args.eeg_data_path,term,subj_class)) if not f == '.DS_Store']
+                for event in event_list:
+                    subj_list = [f for f in os.listdir(os.path.join(self.args.eeg_data_path,term,subj_class,event)) if not f == '.DS_Store']
+                    for subj_id in subj_list:
                         if not subj_id in self.eeg_data_path[term][event[:-1]]:
                             self.eeg_data_path[term][event[:-1]][subj_id] = [os.path.join(self.args.eeg_data_path,term,subj_class,event,subj_id,subj_id+'.vhdr')]
                         else:
