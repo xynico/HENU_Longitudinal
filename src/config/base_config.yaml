@@ -81,8 +81,8 @@ REGRESSION:
   SURVEY_EEG:
     DO: True
     SURVEY: all # all or a list of any column names in the survey file
-    EEG: ['PSD',]
-    EEG_PATH: *FEATURE_PATH
+    EEG_FEATURE: ['PSD',]
+    EEG_FEATURE_PATH: *FEATURE_PATH
     SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
     n_jobs: *n_jobs
   
