@@ -4,7 +4,7 @@ import sys
 from sklearn import datasets
 from utils import *
 from dataset import *
-from processing import *
+from EEG_processing import *
 
 def main():
     parser = ArgumentParser()

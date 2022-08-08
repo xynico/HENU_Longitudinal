@@ -1,5 +1,4 @@
-from errno import EREMCHG
-from tabnanny import verbose
+
 import mne
 import numpy as np
 import os
@@ -12,7 +11,9 @@ from autoreject import AutoReject,set_matplotlib_defaults
 from autoreject import Ransac,get_rejection_threshold
 from mne.preprocessing import ICA
 from mne_connectivity import spectral_connectivity_epochs
-
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import seaborn as sns
 def get_folder_name(config):
     folder_name = f"C{config['CROP']['tmin']}_{config['CROP']['tmax']}_F{config['FILTER']['hp']}_{config['FILTER']['lp']}_N{config['NOTCH_FILTER']['freq']}_E{config['EPOCH']['DurationTime']}"
     return folder_name
@@ -83,7 +84,6 @@ def preprocessing_from_raw(raw,config):
     return epoch
 
 def feature_extraction_loop(folder_name,dataset,config):
-    
     if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name)): os.makedirs(os.path.join(config['SAVE_PATH'],folder_name))
     for term in dataset.eeg_data.keys():
         for event in dataset.eeg_data[term].keys():
@@ -105,18 +105,33 @@ def feature_extraction_loop(folder_name,dataset,config):
 
 def social_network_loop(folder_name,dataset,config):
     if config['DO']:
-        feature_dict = {}
         if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name)): os.makedirs(os.path.join(config['SAVE_PATH'],folder_name))
         for term in dataset.eeg_data.keys():
             for event in dataset.eeg_data[term].keys():
                 temp_list = []
-                for subj_id in  tqdm(dataset.used_id,desc = f"social_network: {term}_{event}"):
+                for subj_id in tqdm(dataset.used_id,desc = f"social_network: {term}_{event}"):
                     temp_list.append(social_network(folder_name,config,term,event,subj_id))
+                corr_method_dict = {}
                 for method in config['FEATURE'].keys():
                     feature_array = np.concatenate([f[method] for f in temp_list],axis = 0)
-                    corr = np.corrcoef(feature_array)
-                    print(corr.shape)
-
+                    channel_name = [f"{method}_{subj_id}_{i}" for i in range(temp_list[-1][method].shape[0]) for subj_id in dataset.used_id]
+                    corr = np.corrcoef(feature_array) # correlation matrix, subj*n_channel x subj*n_channel, indicated by the channel name
+                    corr_method_dict[method] = {'corr': corr, 'channel_name': channel_name}
+                    if config['VISUALIZATION']:
+                        fig,ax = plt.subplots(figsize = (10,10))
+                        sns.heatmap(corr,cmap = 'jet',ax = ax)
+                        tick_spacing = temp_list[-1][method].shape[0]
+                        ax.set_xticks(range(len(channel_name)))
+                        ax.set_yticks(range(len(channel_name)))
+                        ax.set_xticklabels(channel_name,rotation = 90)
+                        ax.set_yticklabels(channel_name)
+                        ax.set_title(f"{term}_{event}_{method}")
+                        ax.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing+1))
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing+1))
+                        plt.savefig(os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_corr.png'))
+                        plt.close()
+                    
+                savepkl(corr_method_dict,os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_corr_method_dict.pkl'))
 
 def social_network(folder_name,config,term,event,subj_id):
     feature = {}
