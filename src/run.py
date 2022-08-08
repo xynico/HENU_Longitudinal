@@ -5,6 +5,7 @@ from sklearn import datasets
 from utils import *
 from dataset import *
 from EEG_processing import *
+from direct_regression import *
 
 def main():
     parser = ArgumentParser()
@@ -16,7 +17,8 @@ def main():
     dataset = SNDataset(config,args)
     folder_name = preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
     feature_extraction_loop(folder_name,dataset,config['PROCESSING']['FEATURE_EXTRACTION'])
-    social_network_loop(folder_name,dataset,config['PROCESSING']['SOCIAL_NETWORK'])
+    EEG_social_network_loop(folder_name,dataset,config['PROCESSING']['EEG_SOCIAL_NETWORK'])
+    direct_regression_survey_EEG(folder_name,dataset,config['REGRESSION']['SURVEY_EEG'])
 
 
 

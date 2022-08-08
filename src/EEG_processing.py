@@ -103,14 +103,14 @@ def feature_extraction_loop(folder_name,dataset,config):
                             functional_connectivity(epoch,config['FUNCTIONALCONNECTIVITY']), 
                             os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_{subj_id}_functional_connectivity.pkl'))
 
-def social_network_loop(folder_name,dataset,config):
+def EEG_social_network_loop(folder_name,dataset,config):
     if config['DO']:
         if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name)): os.makedirs(os.path.join(config['SAVE_PATH'],folder_name))
         for term in dataset.eeg_data.keys():
             for event in dataset.eeg_data[term].keys():
                 temp_list = []
                 for subj_id in tqdm(dataset.used_id,desc = f"social_network: {term}_{event}"):
-                    temp_list.append(social_network(folder_name,config,term,event,subj_id))
+                    temp_list.append(EEG_social_network(folder_name,config,term,event,subj_id))
                 corr_method_dict = {}
                 for method in config['FEATURE'].keys():
                     feature_array = np.concatenate([f[method] for f in temp_list],axis = 0)
@@ -133,7 +133,7 @@ def social_network_loop(folder_name,dataset,config):
                     
                 savepkl(corr_method_dict,os.path.join(config['SAVE_PATH'],folder_name,f'{term}_{event}_corr_method_dict.pkl'))
 
-def social_network(folder_name,config,term,event,subj_id):
+def EEG_social_network(folder_name,config,term,event,subj_id):
     feature = {}
     if 'PSD' in config['FEATURE'].keys():
         psd_array = loadpkl(
@@ -142,7 +142,8 @@ def social_network(folder_name,config,term,event,subj_id):
         feature['PSD'] = np.mean(psd_array[0],axis = 0)
     return feature
 
-    
+
+
 
                     
                     

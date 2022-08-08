@@ -61,15 +61,33 @@ PROCESSING:
       faverage: True
       n_jobs: *n_jobs
       
-  SOCIAL_NETWORK:
+  EEG_SOCIAL_NETWORK:
     DO: True
     SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_SN
     FEATURE: {'PSD': *FEATURE_PATH}
     EPOCH_PATH: *EPOCH_PATH 
     VISUALIZATION: True
 
-      
-  BEHAVIOR:
+  # TODO: add the following processing steps
+  SURVEY_SOCIAL_NETWORK:
+    DO: True
+    SAVE_PATH: /data/xiaowei/social_network/HENU/survey_SN
+    EPOCH_PATH: *EPOCH_PATH 
+    VISUALIZATION: True
+  
+
+
+REGRESSION:
+  SURVEY_EEG:
+    DO: True
+    SURVEY: all # all or a list of any column names in the survey file
+    EEG: ['PSD',]
+    EEG_PATH: *FEATURE_PATH
+    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
+    n_jobs: *n_jobs
+  
+
+    
 
 
       
