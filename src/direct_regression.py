@@ -5,7 +5,9 @@ import pandas as pd
 from scipy import signal
 from tqdm import tqdm
 from utils import *
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression,Ridge
+from sklearn import svm
+from xgboost import XGBRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
