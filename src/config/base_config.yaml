@@ -77,16 +77,22 @@ PROCESSING:
   
 
 
+
 REGRESSION:
-  SURVEY_EEG:
+  EEG_OVO:
     DO: True
-    SURVEY: all # all or a list of any column names in the survey file
+    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
     EEG_FEATURE: {'PSD': *PSD, 'FUNCTIONALCONNECTIVITY': *FUNCTIONALCONNECTIVITY}
     EEG_FEATURE_PATH: *FEATURE_PATH
-    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
-    n_jobs: *n_jobs
-  
-
+    
+    MODEL:
+      model_type: LinearRegression
+      standardize: True
+      test_rate: 0.2
+      split_random_state: *seed
+      kwargs: {n_jobs: *n_jobs}
+      VISUALIZATION: True
+    
     
 
 
