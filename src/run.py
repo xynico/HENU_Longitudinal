@@ -18,7 +18,7 @@ def main():
     folder_name = preprocessing_loop(dataset,config['PROCESSING']['PREPROCESSING'])
     feature_extraction_loop(folder_name,dataset,config['PROCESSING']['FEATURE_EXTRACTION'])
     EEG_social_network_loop(folder_name,dataset,config['PROCESSING']['EEG_SOCIAL_NETWORK'])
-    direct_regression_survey_EEG(folder_name,dataset,config['REGRESSION']['SURVEY_EEG'])
+    direct_regression_EEG(folder_name,dataset,config['REGRESSION']['EEG_OVO'])
 
 
 

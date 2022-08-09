@@ -16,7 +16,7 @@ PROCESSING:
   PREPROCESSING:
     DO: False
     SAVE_PATH: &EPOCH_PATH /data/xiaowei/social_network/HENU/preprocessing
-    n_jobs: -1
+    n_jobs: *n_jobs
     CHANNEL:
       montageName: /data/xiaowei/social_network/HENU/data/standard-10-5-cap385.elp
       channelTypes: {}
@@ -78,13 +78,20 @@ PROCESSING:
 
 
 REGRESSION:
-  SURVEY_EEG:
+  EEG_OVO:
     DO: True
-    SURVEY: all # all or a list of any column names in the survey file
+    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
     EEG_FEATURE: {'PSD': *PSD, 'FUNCTIONALCONNECTIVITY': *FUNCTIONALCONNECTIVITY}
     EEG_FEATURE_PATH: *FEATURE_PATH
-    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
-    n_jobs: *n_jobs
+    
+    MODEL:
+      model_type: LinearRegression
+      standardize: True
+      test_rate: 0.2
+      split_random_state: *seed
+      kwargs: {n_jobs: *n_jobs}
+      VISUALIZATION: True
+    
   
 
     

@@ -55,20 +55,22 @@ class SNDataset():
             id_colums = list(self.social_network_data['ID'])
             id_row = list(self.social_network_data.columns)
             id_row.pop(0)
-            self.social_network_id = [id_colums,id_row]
+            self.social_network_id = np.intersect1d(id_colums,id_row)
 
             # check 
             self.intersection_eeg_id = np.array(self.intersection_eeg_id,dtype=str)
             # set the Dataframe index as the first column
             self.intersection_survey_id = np.array(self.intersection_survey_id,dtype=str)
-            self.used_id = np.intersect1d(self.intersection_eeg_id,self.intersection_survey_id)
+            self.social_network_id = np.array(self.social_network_id,dtype=str)
+            self.used_id = reduce(np.intersect1d, [self.intersection_eeg_id,self.intersection_survey_id,self.social_network_id])
+            print(f'{len(self.used_id)} subjects are used in the dataset')
+            # self.used_id = np.intersect1d(self.intersection_eeg_id,self.intersection_survey_id)
             
 
         elif type(self.config['DATASET']['EEG']['check_data']) == list:
             self.used_id = self.config['DATASET']['EEG']['check_data']                            
         else:
             raise ValueError('check_data must be either "auto" or list')
-        print(f'{len(self.used_id)} subjects are used in the dataset')
 
     def get_survey_data(self):
 
