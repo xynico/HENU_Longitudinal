@@ -36,6 +36,9 @@ PROCESSING:
     NOTCH_FILTER:
       DO: False
       freq: 50
+    REREFERENCE:
+      DO: True
+      ref_channels: 'average' # a list of channel names, or average 
     EPOCH:
       DurationTime: 2
       MarkName: &event_name T

@@ -12,9 +12,25 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
+
+class Regression_trainer():
+
+    def __init__(self,folder_name,dataset,config):
+        self.dataset = dataset
+        self.config = config
+        self.folder_name = folder_name
+
+        
+
+    def fit(self,X_train,y_train):
+        self.model = eval(f"{self.model_type}(**{self.kwargs})")
+        self.model.fit(X_train,y_train)
+        return self.model
+    def predict(self,X_val):
+        return self.model.predict(X_val)
+
 def direct_regression_EEG(folder_name,dataset,config):
     if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name)): os.makedirs(os.path.join(config['SAVE_PATH'],folder_name))
-    
     EEG_model_loop(folder_name,dataset,config)
 
 def EEG_model_loop(folder_name,dataset,config):
