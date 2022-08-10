@@ -33,26 +33,32 @@ class EEG_Regression_trainer():
         self.r2_score = {}
         for term in self.dataset.eeg_data.keys():
             self.model[term] = {}
-            self.r2_score[term] = {}
             for EEG_method in tqdm(self.EEG_feature[term].keys(),desc=f"{self.config['MODEL']['model_type']}_{term} model "):
+                EEG_data = np.stack(self.EEG_feature[term][EEG_method])
+                subj_id_list = self.dataset.used_id
+                X = np.stack([np.concatenate([EEG_data[idx_s1],EEG_data[idx_s2]]) 
+                                for idx_s1 in range(EEG_data.shape[0]) 
+                                for idx_s2 in range(EEG_data.shape[0]) 
+                                if idx_s1 != idx_s2])
+                y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] for s1 in subj_id_list for s2 in subj_id_list if s1 != s2])
+                X_train,X_val,y_train,y_val = self.split_train_val(X,y)
+                if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
+
                 if self.config['PRETRAIN']:
                     self.model[term][EEG_method] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
                 else:
-                    EEG_data = np.stack(self.EEG_feature[term][EEG_method])
-                    subj_id_list = self.dataset.used_id
-                    X = np.stack([np.concatenate([EEG_data[idx_s1],EEG_data[idx_s2]]) 
-                                    for idx_s1 in range(EEG_data.shape[0]) 
-                                    for idx_s2 in range(EEG_data.shape[0]) 
-                                    if idx_s1 != idx_s2])
-                    y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] for s1 in subj_id_list for s2 in subj_id_list if s1 != s2])
-                    X_train,X_val,y_train,y_val = self.split_train_val(X,y)
-                    if self.config['MODEL']['standardize']:
-                        X_train,X_val = standardize(X_train,X_val)
                     self.model[term][EEG_method] =self.EEG_model_fit(X_train,y_train)
                     savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
-                self.r2_score[term][EEG_method] = self.EEG_model_test(self.folder_name,X_val,y_val,term,EEG_method)
+                self.r2_score[f"{term}_{EEG_method}"] = self.EEG_model_test(X_val,y_val,term,EEG_method)
+                self.r2_summary()
 
-    def EEG_model_test(self,folder_name,X_val,y_val,term,EEG_method):
+    def r2_summary(self):
+        INDEX = list(self.r2_score.keys())
+        VALUE = list(self.r2_score.values())
+        r2_summary = pd.DataFrame({"index":INDEX,"value":VALUE})
+        r2_summary.to_csv(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_r2_score.csv"),index=False)
+        
+    def EEG_model_test(self,X_val,y_val,term,EEG_method):
         y_pred = self.model[term][EEG_method].predict(X_val)
         r2 = r2_score(y_val,y_pred)
         if self.config['MODEL']['VISUALIZATION']:
@@ -136,7 +142,6 @@ class Survey_Regression_trainer(EEG_Regression_trainer):
     def survey_model_loop(self):
         
         #  GENERATE DATA as a dict: {f"{term}_{event}": [survey_feature,],}
-        print("Survey model loop for GENERATE DATA as a dict")
         if self.config['METHOD_WAY']['method'] == "ovo":
             data = {}
             for term in self.survey_feature_map.keys():
@@ -151,7 +156,6 @@ class Survey_Regression_trainer(EEG_Regression_trainer):
             raise ValueError("Method way is not defined correctly, which should be either 'ovo' or a dict")
         
         # define the n_feature
-        print("Survey model loop for define the n_feature")
         if self.config['METHOD_WAY']['n_feature'] == "all":
             n_feature = range(1,len(data.keys())+1)
         elif type(self.config['METHOD_WAY']['n_feature']) == list:
@@ -160,25 +164,56 @@ class Survey_Regression_trainer(EEG_Regression_trainer):
             raise ValueError("Method way is not defined correctly, which should be either 'all' or a list")
 
         # Generate the all the possible combination of features
-        print("Survey model loop for Generate the all the possible combination of features")
         feature_combination = [list(combinations(data.keys(),n)) for n in n_feature]
         
         # TRAINING LOOP
         self.train(data,feature_combination)
-    
-    def train(self,data,feature_combination):
-        for feature_combination in feature_combination:
-            subj_id_list = self.dataset.used_id
-            X_feature = 
-            X = np.stack([np.concatenate([data[idx_s1],EEG_data[idx_s2]]) 
-                            for idx_s1 in range(EEG_data.shape[0]) 
-                            for idx_s2 in range(EEG_data.shape[0]) 
-                            if idx_s1 != idx_s2])
-            y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] for s1 in subj_id_list for s2 in subj_id_list if s1 != s2])
 
-            X_train,X_val,y_train,y_val = self.split_train_val(data[f"{term}_{feature}"] for term,feature in zip(term,feature))
-            model = self.EEG_model_fit(X_train,y_train)
-            self.save_model(model,feature_combination)
+    
+    
+    def test(self,X_val,y_val,loop_key):
+        y_pred = self.model[loop_key].predict(X_val)
+        r2 = r2_score(y_val,y_pred)
+        if self.config['MODEL']['VISUALIZATION']:
+            plt.figure(figsize=(10,10))
+            plt.scatter(y_val,y_pred,s=1,c='r')
+            plt.xlabel('True')
+            plt.ylabel('Predicted')
+            plt.title(f'True vs Predicted with r^2={r2}')
+            plt.savefig(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{loop_key}_true_vs_predicted.png"))
+            plt.close()
+        return r2
+
+
+    def train(self,data,feature_combination):
+        subj_id_list = self.dataset.used_id
+        self.model = {}
+        self.r2_score = {}
+        for idx,f_comb in enumerate(feature_combination):
+            for features in tqdm(f_comb,desc = f"{(idx+1)/len(feature_combination):.2%}"):
+                loop_key = '_'.join(features)
+                X_feature = np.stack([data[k] for k in features]).T
+                X = np.stack([np.concatenate([X_feature[idx_s1],X_feature[idx_s2]]) 
+                                            for idx_s1 in range(X_feature.shape[0]) 
+                                            for idx_s2 in range(X_feature.shape[0]) 
+                                            if idx_s1 != idx_s2])
+                y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] for s1 in subj_id_list for s2 in subj_id_list if s1 != s2])
+                X_train,X_val,y_train,y_val = self.split_train_val(X,y)
+                if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
+
+                if self.config['PRETRAIN']:
+                    if not os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{loop_key}_model.pkl")):
+                        self.model[loop_key] = self.EEG_model_fit(X_train,y_train)
+                        savepkl(self.model[loop_key],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{loop_key}_model.pkl"))
+                    else:
+                        self.model[loop_key] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{loop_key}_model.pkl"))
+                else:
+                    self.model[loop_key] = self.EEG_model_fit(X_train,y_train)
+                    savepkl(self.model[loop_key],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{loop_key}_model.pkl"))
+                # TEST LOOP
+                self.r2_score[loop_key] = self.test(X_val,y_val,loop_key)
+                self.r2_summary()
+        
                 
     def load_survey_feature(self):
         self.survey_feature = {"final": self.dataset.final_survey_data,"midterm": self.dataset.midterm_survey_data}

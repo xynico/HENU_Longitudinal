@@ -87,7 +87,7 @@ REGRESSION:
     SAVE_PATH: !join [*FOLDER_PATH, /EEG_regression]
     EEG_FEATURE: {'PSD': *PSD, 'FUNCTIONALCONNECTIVITY': *FUNCTIONALCONNECTIVITY}
     EEG_FEATURE_PATH: *FEATURE_PATH
-    PRETRAIN: False
+    PRETRAIN: True
     
     MODEL:
       model_type: LinearRegression
@@ -130,19 +130,19 @@ REGRESSION:
       midterm: all # all or a list of variable names
     METHOD_WAY:
       method: ovo # ovo: test all possible combinations of methods, or a dict of {term: [features,],}
-      n_feature: [1,2]
+      n_feature: [1,2,3]
       # all, list
       # e.g. 1 means: try every feature to predict the relationship. 2 means: try every pair of features to predict the relationship.
       # all means: try every combination of features to predict the relationship. !!!! OUT OF MEMORY !!!! NOT RECOMMENDED !!!
       # list means: try every combination of features in the list to predict the relationship.
-    PRETRAIN: False
-    MODEL:
-      model_type: LinearRegression
-      standardize: True
-      test_rate: 0.2
-      split_random_state: *seed
-      kwargs: {n_jobs: *n_jobs}
-      VISUALIZATION: True
+    PRETRAIN: True
+    # MODEL:
+    #   model_type: LinearRegression
+    #   standardize: True
+    #   test_rate: 0.2
+    #   split_random_state: *seed
+    #   kwargs: {n_jobs: *n_jobs}
+    #   VISUALIZATION: False
       # MODEL:
       #   model_type: Ridge
       #   standardize: True
@@ -157,13 +157,13 @@ REGRESSION:
       #   split_random_state: *seed
       #   kwargs: {kernel: rbf,cache_size: 1000}
       #   VISUALIZATION: True
-      # MODEL:
-      #   model_type: XGBRegressor
-      #   standardize: True
-      #   test_rate: 0.2
-      #   split_random_state: *seed
-      #   kwargs: {verbosity: 0, objective: reg:squarederror}
-      #   VISUALIZATION: True
+    MODEL:
+      model_type: XGBRegressor
+      standardize: True
+      test_rate: 0.2
+      split_random_state: *seed
+      kwargs: {verbosity: 0, objective: reg:squarederror, n_jobs: *n_jobs, random_state: *seed}
+      VISUALIZATION: True
 
     
 
