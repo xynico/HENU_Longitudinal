@@ -2,6 +2,7 @@ GLOBAL:
   seed: &seed 42
   n_jobs: &n_jobs -1
   o_sfreqs: &o_sfreq 500
+  FOLDER_PATH: &FOLDER_PATH /data/xiaowei/social_network/HENU
 DATASET:
   SURVEY:
     final_file_path: final.xlsx
@@ -15,10 +16,10 @@ DATASET:
 PROCESSING:
   PREPROCESSING:
     DO: False
-    SAVE_PATH: &EPOCH_PATH /data/xiaowei/social_network/HENU/preprocessing
+    SAVE_PATH: &EPOCH_PATH !join [*FOLDER_PATH, /preprocessing]
     n_jobs: *n_jobs
     CHANNEL:
-      montageName: /data/xiaowei/social_network/HENU/data/standard-10-5-cap385.elp
+      montageName: !join [*FOLDER_PATH, /data/standard-10-5-cap385.elp]
       channelTypes: {}
       dropChannel: [IO,]
       mapping: {}
@@ -49,7 +50,7 @@ PROCESSING:
       DO: True
   FEATURE_EXTRACTION:
     EPOCH_PATH: *EPOCH_PATH
-    SAVE_PATH: &FEATURE_PATH /data/xiaowei/social_network/HENU/EEG_features
+    SAVE_PATH: &FEATURE_PATH !join [*FOLDER_PATH, /EEG_features]
     PSD: &PSD
       DO: True
       fmin: *hp
@@ -66,7 +67,7 @@ PROCESSING:
       
   EEG_SOCIAL_NETWORK:
     DO: False
-    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_SN
+    SAVE_PATH: !join [*FOLDER_PATH, /EEG_SN]
     FEATURE: {'PSD': *FEATURE_PATH}
     EPOCH_PATH: *EPOCH_PATH 
     VISUALIZATION: True
@@ -74,7 +75,7 @@ PROCESSING:
   # TODO: add the following processing steps
   SURVEY_SOCIAL_NETWORK:
     DO: False
-    SAVE_PATH: /data/xiaowei/social_network/HENU/survey_SN
+    SAVE_PATH: !join [*FOLDER_PATH, /survey_SN]
     EPOCH_PATH: *EPOCH_PATH 
     VISUALIZATION: True
   
@@ -82,18 +83,19 @@ PROCESSING:
 
 REGRESSION:
   EEG_OVO:
-    DO: True
-    SAVE_PATH: /data/xiaowei/social_network/HENU/EEG_regression
+    DO: False
+    SAVE_PATH: !join [*FOLDER_PATH, /EEG_regression]
     EEG_FEATURE: {'PSD': *PSD, 'FUNCTIONALCONNECTIVITY': *FUNCTIONALCONNECTIVITY}
     EEG_FEATURE_PATH: *FEATURE_PATH
+    PRETRAIN: False
     
-    # MODEL:
-    #   model_type: LinearRegression
-    #   standardize: True
-    #   test_rate: 0.2
-    #   split_random_state: *seed
-    #   kwargs: {n_jobs: *n_jobs}
-    #   VISUALIZATION: True
+    MODEL:
+      model_type: LinearRegression
+      standardize: True
+      test_rate: 0.2
+      split_random_state: *seed
+      kwargs: {n_jobs: *n_jobs}
+      VISUALIZATION: True
 
     # MODEL:
     #   model_type: Ridge
@@ -110,15 +112,58 @@ REGRESSION:
     #   split_random_state: *seed
     #   kwargs: {kernel: rbf,cache_size: 1000}
     #   VISUALIZATION: True
+    # MODEL:
+    #   model_type: XGBRegressor
+    #   standardize: True
+    #   test_rate: 0.2
+    #   split_random_state: *seed
+    #   kwargs: {verbosity: 0, objective: reg:squarederror}
+    #   VISUALIZATION: True
+    
+  
+
+  SURVEY_OVO:
+    DO: True
+    SAVE_PATH: !join [*FOLDER_PATH, /SURVEY_regression]
+    SURVEY_FEATURE: 
+      final: all # all or a list of variable names
+      midterm: all # all or a list of variable names
+    METHOD_WAY:
+      method: ovo # ovo: test all possible combinations of methods, or a dict of {term: [features,],}
+      n_feature: [1,2]
+      # all, list
+      # e.g. 1 means: try every feature to predict the relationship. 2 means: try every pair of features to predict the relationship.
+      # all means: try every combination of features to predict the relationship. !!!! OUT OF MEMORY !!!! NOT RECOMMENDED !!!
+      # list means: try every combination of features in the list to predict the relationship.
+    PRETRAIN: False
     MODEL:
-      model_type: XGBRegressor
+      model_type: LinearRegression
       standardize: True
       test_rate: 0.2
       split_random_state: *seed
-      kwargs: {verbosity: 0, objective: reg:squarederror}
+      kwargs: {n_jobs: *n_jobs}
       VISUALIZATION: True
-    
-  
+      # MODEL:
+      #   model_type: Ridge
+      #   standardize: True
+      #   test_rate: 0.2
+      #   split_random_state: *seed
+      #   kwargs: {random_state: *seed}
+      #   VISUALIZATION: True
+      # MODEL:
+      #   model_type: svm.SVR
+      #   standardize: True
+      #   test_rate: 0.2
+      #   split_random_state: *seed
+      #   kwargs: {kernel: rbf,cache_size: 1000}
+      #   VISUALIZATION: True
+      # MODEL:
+      #   model_type: XGBRegressor
+      #   standardize: True
+      #   test_rate: 0.2
+      #   split_random_state: *seed
+      #   kwargs: {verbosity: 0, objective: reg:squarederror}
+      #   VISUALIZATION: True
 
     
 
