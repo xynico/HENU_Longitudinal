@@ -32,10 +32,10 @@ PROCESSING:
       sfreq: 500
     FILTER:
       DO: True
-      hp: &hp 1
-      lp: &lp 40
+      hp: &hp 8
+      lp: &lp 14
     NOTCH_FILTER:
-      DO: False
+      DO: True
       freq: 50
     REREFERENCE:
       DO: True
@@ -83,11 +83,12 @@ PROCESSING:
 
 REGRESSION:
   EEG_OVO:
-    DO: False
+    DO: True
     SAVE_PATH: !join [*FOLDER_PATH, /EEG_regression]
     EEG_FEATURE: {'PSD': *PSD, 'FUNCTIONALCONNECTIVITY': *FUNCTIONALCONNECTIVITY}
     EEG_FEATURE_PATH: *FEATURE_PATH
     PRETRAIN: True
+    CHANNEL_SELECION: channel # all,channel, or a list of channel idx
     
     MODEL:
       model_type: LinearRegression
@@ -123,7 +124,7 @@ REGRESSION:
   
 
   SURVEY_OVO:
-    DO: True
+    DO: False
     SAVE_PATH: !join [*FOLDER_PATH, /SURVEY_regression]
     SURVEY_FEATURE: 
       final: all # all or a list of variable names

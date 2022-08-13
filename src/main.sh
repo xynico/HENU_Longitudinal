@@ -7,5 +7,6 @@ CFG=/data/xiaowei/social_network/HENU/src/config/test.yaml
 EEG_DATA_PATH=/data/xiaowei/social_network/HENU/data/eeg_data
 SURVEY_DATA_PATH=/data/xiaowei/social_network/HENU/data/survey_data
 
+clear
 $PYTHON /data/xiaowei/social_network/HENU/src/run.py --cfg=$CFG --eeg_data_path=$EEG_DATA_PATH --survey_data_path=$SURVEY_DATA_PATH
 

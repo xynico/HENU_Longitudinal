@@ -39,14 +39,24 @@ class EEG_Regression_trainer():
                 X = np.stack([np.concatenate([EEG_data[idx_s1],EEG_data[idx_s2]]) 
                                 for idx_s1 in range(EEG_data.shape[0]) 
                                 for idx_s2 in range(EEG_data.shape[0]) 
-                                if idx_s1 != idx_s2])
-                y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] for s1 in subj_id_list for s2 in subj_id_list if s1 != s2])
+                                if idx_s1 < idx_s2])
+                y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] 
+                                for s1 in subj_id_list 
+                                for s2 in subj_id_list 
+                                if s1 < s2])
                 X_train,X_val,y_train,y_val = self.split_train_val(X,y)
-                if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
 
+                if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
+                print(f"{term}_{EEG_method} model fitting ... X_train {X_train.shape} \n {X_train}")
+                print(f"{term}_{EEG_method} model fitting ... X_val {X_val.shape} \n {X_val}")
                 if self.config['PRETRAIN']:
-                    self.model[term][EEG_method] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+                    if os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl")):
+                        self.model[term][EEG_method] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+                    else:
+                        self.model[term][EEG_method] = self.EEG_model_fit(X_train,y_train)
+                        savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
                 else:
+                    
                     self.model[term][EEG_method] =self.EEG_model_fit(X_train,y_train)
                     savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
                 self.r2_score[f"{term}_{EEG_method}"] = self.EEG_model_test(X_val,y_val,term,EEG_method)
@@ -78,8 +88,20 @@ class EEG_Regression_trainer():
             for event in self.dataset.eeg_data[term].keys():
                 for method in self.config['EEG_FEATURE']:
                     if method == "PSD":
-                        self.EEG_feature[term][f"{event}_{method}"] = []
-                        self.EEG_feature_map[term][f"{event}_{method}"] = []
+
+                        if self.config['CHANNEL_SELECION'] == 'all': 
+                            self.EEG_feature[term][f"{event}_{method}"] = []
+                            self.EEG_feature_map[term][f"{event}_{method}"] = []
+                        elif self.config['CHANNEL_SELECION'] == 'channel': 
+                            psd = loadpkl(os.path.join(self.config['EEG_FEATURE_PATH'],self.folder_name,f'{term}_{event}_{self.dataset.used_id[0]}_psd.pkl'))
+                            for ch in range(psd[0].shape[1]):
+                                self.EEG_feature[term][f"{event}_{method}_CH{ch}"] = []
+                                self.EEG_feature_map[term][f"{event}_{method}_CH{ch}"] = []
+                        elif type(self.config['CHANNEL_SELECION']) == list:
+                            for ch in self.config['CHANNEL_SELECION']:
+                                self.EEG_feature[term][f"{event}_{method}_CH{ch}"] = []
+                                self.EEG_feature_map[term][f"{event}_{method}_CH{ch}"] = []
+                        
                     elif method == "FUNCTIONALCONNECTIVITY":
                         for fc_method in self.config['EEG_FEATURE']['FUNCTIONALCONNECTIVITY']['method']:
                             self.EEG_feature[term][f"{event}_{method}_{fc_method}"] = []
@@ -88,11 +110,26 @@ class EEG_Regression_trainer():
                     for method in self.config['EEG_FEATURE'].keys():
                         if method == "PSD":
                             psd = loadpkl(os.path.join(self.config['EEG_FEATURE_PATH'],self.folder_name,f'{term}_{event}_{subj_id}_psd.pkl'))
-                            psd_vector,psd_vector_loc = flatten_connectivity_matrix(psd[0].mean(0),pop_same=False)# (n_epoch,n_channel,n_psd) -> (n_channel,n_psd) -> (n_psd*n_channel)
-                            self.EEG_feature[term][f"{event}_{method}"].append(psd_vector)
-                            for idx,(i,j) in enumerate(psd_vector_loc):
-                                psd_vector_loc[idx] = (i,psd[1][j])
-                            self.EEG_feature_map[term][f"{event}_{method}"].append(psd_vector_loc) #(n_psd*n_channel)
+                            if self.config['CHANNEL_SELECION'] == 'all': 
+                                psd_vector,psd_vector_loc = flatten_connectivity_matrix(psd[0].mean(0),pop_same=False)# (n_epoch,n_channel,n_psd) -> (n_channel,n_psd) -> (n_psd*n_channel)
+                                self.EEG_feature[term][f"{event}_{method}"].append(psd_vector)
+                                for idx,(i,j) in enumerate(psd_vector_loc): psd_vector_loc[idx] = (i,psd[1][j])
+                                self.EEG_feature_map[term][f"{event}_{method}"].append(psd_vector_loc) #(n_psd*n_channel)
+                            elif self.config['CHANNEL_SELECION'] == 'channel': 
+                                for ch in range(psd[0].shape[1]):
+                                    psd_vector,psd_vector_loc = flatten_connectivity_matrix(psd[0][:,ch,:].mean(0).reshape(1,-1),pop_same=False)
+                                    self.EEG_feature[term][f"{event}_{method}_CH{ch}"].append(psd_vector)
+                                    for idx,(i,j) in enumerate(psd_vector_loc): psd_vector_loc[idx] = (i,psd[1][j])
+                                    self.EEG_feature_map[term][f"{event}_{method}_CH{ch}"].append(psd_vector_loc)
+                            elif type(self.config['CHANNEL_SELECION']) == list:
+                                for ch in self.config['CHANNEL_SELECION']:
+                                    psd_vector,psd_vector_loc = flatten_connectivity_matrix(psd[0][:,ch,:].mean(0).reshape(1,-1),pop_same=False)
+                                    self.EEG_feature[term][f"{event}_{method}_CH{ch}"].append(psd_vector)
+                                    for idx,(i,j) in enumerate(psd_vector_loc): psd_vector_loc[idx] = (i,psd[1][j])
+                                    self.EEG_feature_map[term][f"{event}_{method}_CH{ch}"].append(psd_vector_loc)
+                            else:
+                                raise ValueError(f"{self.config['CHANNEL_SELECION']} is not a valid channel selection method")
+
                         elif method == "FUNCTIONALCONNECTIVITY":
                             '''
                             Details could be found in the following link:
@@ -106,8 +143,11 @@ class EEG_Regression_trainer():
                                 con_vector,con_vector_loc = flatten_connectivity_matrix(con)
                                 self.EEG_feature[term][f"{event}_{method}_{fc_method}"].append(con_vector)
                                 self.EEG_feature_map[term][f"{event}_{method}_{fc_method}"].append(con_vector_loc)
-
+                        else:
+                            raise ValueError(f"{method} is not a valid EEG feature method")
     
+    
+
 
     def load_social_network(self):
         self.social_network_feature = self.dataset.social_network_data
@@ -129,9 +169,10 @@ class Survey_Regression_trainer(EEG_Regression_trainer):
         self.dataset = dataset
         self.config = config
         self.folder_name = folder_name
-        self.load_social_network()
-        self.load_survey_feature()
-        self.direct_regression_survey()
+        if self.config['DO']:
+            self.load_social_network()
+            self.load_survey_feature()
+            self.direct_regression_survey()
 
     
 

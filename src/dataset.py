@@ -30,6 +30,7 @@ class SNDataset():
                     for trial in self.eeg_data_path[term][event][subj_id]:
                         raw = mne.io.read_raw_brainvision(trial,preload=self.config['DATASET']['EEG']['preload'],verbose = 'ERROR')
                         self.eeg_data[term][event][subj_id].append(raw)
+                        
 
     def check_data(self):
         if self.config['DATASET']['EEG']['check_data'] == 'auto':
