@@ -32,8 +32,8 @@ PROCESSING:
       sfreq: 500
     FILTER:
       DO: True
-      hp: &hp 8
-      lp: &lp 14
+      hp: &hp 1
+      lp: &lp 40
     NOTCH_FILTER:
       DO: True
       freq: 50
@@ -90,13 +90,13 @@ REGRESSION:
     PRETRAIN: True
     CHANNEL_SELECION: channel # all,channel, or a list of channel idx
     
-    MODEL:
-      model_type: LinearRegression
-      standardize: True
-      test_rate: 0.2
-      split_random_state: *seed
-      kwargs: {n_jobs: *n_jobs}
-      VISUALIZATION: True
+    # MODEL:
+    #   model_type: LinearRegression
+    #   standardize: True
+    #   test_rate: 0.2
+    #   split_random_state: *seed
+    #   kwargs: {n_jobs: *n_jobs}
+    #   VISUALIZATION: True
 
     # MODEL:
     #   model_type: Ridge
@@ -113,13 +113,13 @@ REGRESSION:
     #   split_random_state: *seed
     #   kwargs: {kernel: rbf,cache_size: 1000}
     #   VISUALIZATION: True
-    # MODEL:
-    #   model_type: XGBRegressor
-    #   standardize: True
-    #   test_rate: 0.2
-    #   split_random_state: *seed
-    #   kwargs: {verbosity: 0, objective: reg:squarederror}
-    #   VISUALIZATION: True
+    MODEL:
+      model_type: XGBRegressor
+      standardize: True
+      test_rate: 0.2
+      split_random_state: *seed
+      kwargs: {verbosity: 0, objective: reg:squarederror}
+      VISUALIZATION: True
     
   
 
