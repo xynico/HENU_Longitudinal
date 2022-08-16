@@ -12,7 +12,8 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 from itertools import combinations
-
+from skopt import BayesSearchCV
+from search_spaces import *
 class EEG_Regression_trainer():
 
     def __init__(self,folder_name,dataset,config):
@@ -30,9 +31,11 @@ class EEG_Regression_trainer():
 
     def EEG_model_loop(self):
         self.model = {}
+        self.Bayesopt_model = {}
         self.r2_score = {}
         for term in self.dataset.eeg_data.keys():
             self.model[term] = {}
+            self.Bayesopt_model[term] = {}
             for EEG_method in tqdm(self.EEG_feature[term].keys(),desc=f"{self.config['MODEL']['model_type']}_{term} model "):
                 EEG_data = np.stack(self.EEG_feature[term][EEG_method])
                 subj_id_list = self.dataset.used_id
@@ -47,19 +50,31 @@ class EEG_Regression_trainer():
                 X_train,X_val,y_train,y_val = self.split_train_val(X,y)
 
                 if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
-                print(f"{term}_{EEG_method} model fitting ... X_train {X_train.shape} \n {X_train}")
-                print(f"{term}_{EEG_method} model fitting ... X_val {X_val.shape} \n {X_val}")
-                if self.config['PRETRAIN']:
-                    if os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl")):
-                        self.model[term][EEG_method] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
-                    else:
-                        self.model[term][EEG_method] = self.EEG_model_fit(X_train,y_train)
-                        savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+
+                if self.config['MODEL']['BayesianOptimization']['DO']:
+                    if self.config['PRETRAIN']:
+                        if os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_BayesOpt.pkl")):
+                            self.Bayesopt_model[term][EEG_method] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_BayesOpt.pkl"))
+                            self.model[term][EEG_method] = self.Bayesopt_model[term][EEG_method].best_estimator_
+
+                        else:
+                            self.Bayesopt_model[term][EEG_method] = self.EEG_model_fit(X_train,y_train)
+                            savepkl(self.Bayesopt_model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_BayesOpt.pkl"))
+                            self.model[term][EEG_method] = self.Bayesopt_model[term][EEG_method].best_estimator_
+                            savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+                        self.r2_score[f"{term}_{EEG_method}"] = self.Bayesopt_model[term][EEG_method].best_score_
                 else:
-                    
-                    self.model[term][EEG_method] =self.EEG_model_fit(X_train,y_train)
-                    savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
-                self.r2_score[f"{term}_{EEG_method}"] = self.EEG_model_test(X_val,y_val,term,EEG_method)
+                    if self.config['PRETRAIN']:
+                        if os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl")):
+                            self.model[term][EEG_method] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+                        else:
+                            self.model[term][EEG_method] = self.EEG_model_fit(X_train,y_train)
+                            savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+                    else:
+                        
+                        self.model[term][EEG_method] =self.EEG_model_fit(X_train,y_train)
+                        savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
+                    self.r2_score[f"{term}_{EEG_method}"] = self.EEG_model_test(X_val,y_val,term,EEG_method)
                 self.r2_summary()
 
     def r2_summary(self):
@@ -154,8 +169,14 @@ class EEG_Regression_trainer():
             
     def EEG_model_fit(self,X_train,y_train):
         model=eval(f"{self.config['MODEL']['model_type']}(**{self.config['MODEL']['kwargs']})")
-        model.fit(X_train,y_train)
-        return model
+        if self.config['MODEL']['BayesianOptimization']['DO']:
+            search_spaces = eval(self.config['MODEL']['BayesianOptimization']['search_spaces'])
+            bayes_cv_tuner = BayesSearchCV(estimator = model,search_spaces = search_spaces,**self.config['MODEL']['BayesianOptimization']['kwargs'])
+            bayes_cv_tuner.fit(X_train,y_train)
+            return bayes_cv_tuner
+        else:
+            model = model.fit(X_train,y_train)
+            return model
 
     def split_train_val(self,X,y):
         X_train,X_val,y_train,y_val = train_test_split(X,y,test_size=self.config['MODEL']['test_rate'],
