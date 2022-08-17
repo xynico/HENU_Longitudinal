@@ -11,7 +11,8 @@ from search_spaces import *
 
 
 def post_EEG_feature_extraction(folder_name,trainer,config):
-    xgboost_feature_importance(folder_name,trainer,config)
+    # xgboost_feature_importance(folder_name,trainer,config)
+    pass
 
 def xgboost_feature_importance(folder_name,trainer,config):
     '''

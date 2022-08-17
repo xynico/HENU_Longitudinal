@@ -56,7 +56,7 @@ def preprocessing_from_raw(raw,config):
     if config['RESAMPLE']['DO']: raw.resample(sfreq = config['RESAMPLE']['sfreq'],verbose = 'ERROR')
     if config['FILTER']['DO']: raw.filter(config['FILTER']['hp'],config['FILTER']['lp'],n_jobs = config['n_jobs'],verbose = 'ERROR')
     if config['NOTCH_FILTER']['DO']: raw.notch_filter(config['NOTCH_FILTER']['freq'],n_jobs = config['n_jobs'],verbose = 'ERROR')
-    if config['REREFERENCE']['DO']: raw.set_eeg_reference(ref_channels = config['REREFERENCE']['ref_channels'],verbose = 'ERROR')
+    if config['REREFERENCE']['DO']: raw.set_eeg_reference(ref_channels = config['REREFERENCE']['ref_channels'],verbose = 'ERROR').apply_proj()
 
     annot = mne.Annotations(onset=list(range(0,int(raw.times[-1]),2)), duration= 0,description=config['EPOCH']['MarkName'])
     raw.set_annotations(annot,verbose = 'ERROR')

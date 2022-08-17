@@ -37,7 +37,7 @@ class EEG_Regression_trainer():
             self.model[term] = {}
             self.Bayesopt_model[term] = {}
             for EEG_method in tqdm(self.EEG_feature[term].keys(),desc=f"{self.config['MODEL']['model_type']}_{term} model "):
-                EEG_data = np.stack(self.EEG_feature[term][EEG_method])
+                EEG_data = np.stack(self.EEG_feature[term][EEG_method]) # psds: 78*31 or fc: 31*31
                 subj_id_list = self.dataset.used_id
                 X = np.stack([np.concatenate([EEG_data[idx_s1],EEG_data[idx_s2]]) 
                                 for idx_s1 in range(EEG_data.shape[0]) 
@@ -280,7 +280,7 @@ class Survey_Regression_trainer(EEG_Regression_trainer):
     def load_survey_feature(self):
         self.survey_feature = {"final": self.dataset.final_survey_data,"midterm": self.dataset.midterm_survey_data}
         self.survey_feature_map = {"final": self.dataset.final_survey_data.columns,"midterm": self.dataset.midterm_survey_data.columns}
-
+        
     
     def survey_model_fit(self,X_train,y_train):
         model=eval(f"{self.config['MODEL']['model_type']}(**{self.config['MODEL']['kwargs']})")
