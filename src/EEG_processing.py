@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 def get_folder_name(config):
-    folder_name = f"C{config['CROP']['tmin']}_{config['CROP']['tmax']}_F{config['FILTER']['hp']}_{config['FILTER']['lp']}_N{config['NOTCH_FILTER']['freq']}_E{config['EPOCH']['DurationTime']}"
+    folder_name = f"C{config['CROP']['tmin']}_{config['CROP']['tmax']}_F{config['FILTER']['hp']}_{config['FILTER']['lp']}_N{config['NOTCH_FILTER']['freq']}_E{config['EPOCH']['DurationTime']}_R{config['REREFERENCE']['ref_channels']}"
     return folder_name
 
 def preprocessing_loop(dataset,config):

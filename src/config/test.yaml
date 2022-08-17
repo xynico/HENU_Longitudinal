@@ -15,7 +15,7 @@ DATASET:
 
 PROCESSING:
   PREPROCESSING:
-    DO: True
+    DO: False
     SAVE_PATH: &EPOCH_PATH !join [*FOLDER_PATH, /preprocessing]
     n_jobs: *n_jobs
     CHANNEL:
@@ -32,8 +32,8 @@ PROCESSING:
       sfreq: 500
     FILTER:
       DO: True
-      hp: &hp 1
-      lp: &lp 40
+      hp: &hp 8
+      lp: &lp 14
     NOTCH_FILTER:
       DO: True
       freq: 50
@@ -95,7 +95,7 @@ PROCESSING:
         kwargs: {verbosity: 0, objective: reg:squarederror, n_jobs: *n_jobs, random_state: *seed, n_estimators: 1000}
         # TODO: !!
         BayesianOptimization:
-          DO: True
+          DO: False
           search_spaces: search_spaces_xgboost
           kwargs:
             cv: 10
