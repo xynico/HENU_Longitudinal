@@ -14,6 +14,9 @@ from sklearn.metrics import r2_score
 from itertools import combinations
 from skopt import BayesSearchCV
 from search_spaces import *
+from sklearn.model_selection import cross_val_score
+
+
 class EEG_Regression_trainer():
 
     def __init__(self,folder_name,dataset,config):
@@ -42,13 +45,13 @@ class EEG_Regression_trainer():
                 X = np.stack([np.concatenate([EEG_data[idx_s1],EEG_data[idx_s2]]) 
                                 for idx_s1 in range(EEG_data.shape[0]) 
                                 for idx_s2 in range(EEG_data.shape[0]) 
-                                if idx_s1 < idx_s2])
+                                if not idx_s1 == idx_s2])
                 y = np.stack([self.social_network_feature[np.int(s2)].loc[self.social_network_feature['ID']==np.int(s1)].values[0] 
                                 for s1 in subj_id_list 
                                 for s2 in subj_id_list 
-                                if s1 < s2])
+                                if not s1 == s2])
                 X_train,X_val,y_train,y_val = self.split_train_val(X,y)
-
+ 
                 if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
 
                 if self.config['MODEL']['BayesianOptimization']['DO']:
@@ -85,6 +88,7 @@ class EEG_Regression_trainer():
         
     def EEG_model_test(self,X_val,y_val,term,EEG_method):
         y_pred = self.model[term][EEG_method].predict(X_val)
+        
         r2 = r2_score(y_val,y_pred)
         if self.config['MODEL']['VISUALIZATION']:
             plt.figure(figsize=(10,10))
@@ -95,7 +99,9 @@ class EEG_Regression_trainer():
             plt.savefig(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_true_vs_predicted.png"))
             plt.close()
         return r2
-                
+    def EEG_model_cv(self,model,X,y, cv=5, scoring='r2'):
+        scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
+        return scores.mean()
     def load_EEG_feature(self):
         self.EEG_feature = {term: {} for term in self.dataset.eeg_data.keys()}
         self.EEG_feature_map = {term: {} for term in self.dataset.eeg_data.keys()}
@@ -161,9 +167,6 @@ class EEG_Regression_trainer():
                         else:
                             raise ValueError(f"{method} is not a valid EEG feature method")
     
-    
-
-
     def load_social_network(self):
         self.social_network_feature = self.dataset.social_network_data
             

@@ -23,5 +23,5 @@ def xgboost_feature_importance(folder_name,trainer,config):
     for term in trainer.dataset.eeg_data.keys():
         for model_name in trainer.model[term].keys():
             fscore[term][model_name] = trainer.model[term][model_name].get_booster().get_score(fmap='', importance_type='weight')
-            print(f"E {trainer.model[term][model_name].get_booster().get_score(fmap='', importance_type='weight')}"       )
+            print(f"E {trainer.model[term][model_name].get_booster().get_score(fmap='', importance_type='weight')}" )
             raise NotImplementedError

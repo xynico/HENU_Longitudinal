@@ -15,10 +15,13 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 def get_folder_name(config):
-    folder_name = f"C{config['CROP']['tmin']}_{config['CROP']['tmax']}_F{config['FILTER']['hp']}_{config['FILTER']['lp']}_N{config['NOTCH_FILTER']['freq']}_E{config['EPOCH']['DurationTime']}_R{config['REREFERENCE']['ref_channels']}"
+    folder_name = f"S{config['SEED']}_C{config['CROP']['tmin']}_{config['CROP']['tmax']}_F{config['FILTER']['hp']}_{config['FILTER']['lp']}_N{config['NOTCH_FILTER']['freq']}_E{config['EPOCH']['DurationTime']}_R{config['REREFERENCE']['ref_channels']}"
     return folder_name
 
 def preprocessing_loop(dataset,config):
+    if config['GPU']: mne.utils.set_config('MNE_USE_CUDA', 'true')
+        
+
     folder_name = get_folder_name(config)
     if not os.path.exists(os.path.join(config['SAVE_PATH'],folder_name)): os.makedirs(os.path.join(config['SAVE_PATH'],folder_name))
     for term in dataset.eeg_data.keys():
@@ -54,8 +57,12 @@ def preprocessing_from_raw(raw,config):
     except:
         if config['CROP']['DO']: raw.crop(config['CROP']['tmin'],verbose = 'ERROR')
     if config['RESAMPLE']['DO']: raw.resample(sfreq = config['RESAMPLE']['sfreq'],verbose = 'ERROR')
-    if config['FILTER']['DO']: raw.filter(config['FILTER']['hp'],config['FILTER']['lp'],n_jobs = config['n_jobs'],verbose = 'ERROR')
-    if config['NOTCH_FILTER']['DO']: raw.notch_filter(config['NOTCH_FILTER']['freq'],n_jobs = config['n_jobs'],verbose = 'ERROR')
+    if config['GPU']:
+        if config['FILTER']['DO']: raw.filter(config['FILTER']['hp'],config['FILTER']['lp'],n_jobs = 'cuda',verbose = 'ERROR')
+        if config['NOTCH_FILTER']['DO']: raw.notch_filter(config['NOTCH_FILTER']['freq'],n_jobs = 'cuda',verbose = 'ERROR')
+    else:
+        if config['FILTER']['DO']: raw.filter(config['FILTER']['hp'],config['FILTER']['lp'],n_jobs = config['n_jobs'],verbose = 'ERROR')
+        if config['NOTCH_FILTER']['DO']: raw.notch_filter(config['NOTCH_FILTER']['freq'],n_jobs = config['n_jobs'],verbose = 'ERROR')
     if config['REREFERENCE']['DO']: raw.set_eeg_reference(ref_channels = config['REREFERENCE']['ref_channels'],verbose = 'ERROR').apply_proj()
 
     annot = mne.Annotations(onset=list(range(0,int(raw.times[-1]),2)), duration= 0,description=config['EPOCH']['MarkName'])

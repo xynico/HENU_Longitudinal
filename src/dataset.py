@@ -1,3 +1,4 @@
+from distutils.command.config import config
 from operator import index
 from tabnanny import verbose
 from typing import final
@@ -64,6 +65,8 @@ class SNDataset():
             self.social_network_id = np.array(self.social_network_id,dtype=str)
             self.used_id = reduce(np.intersect1d, [self.intersection_eeg_id,self.intersection_survey_id,self.social_network_id])
             print(f'{len(self.used_id)} subjects are used in the dataset')
+            #save the used_id to the config file
+            # np.savetxt(self.used_id,config['DATASET']['ID']['SAVE_PATH']+'/used_id.txt',fmt='%s')
             # self.used_id = np.intersect1d(self.intersection_eeg_id,self.intersection_survey_id)
             
 

@@ -2,10 +2,23 @@ import numpy as np
 import pandas as pd
 from utils import *
 import pingouin as pg
-
+from sklearn.model_selection import train_test_split
+from xgboost import XGBRegressor
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import StandardScaler
+from skopt import BayesSearchCV
+import shap
 def statistic_all_in_one(folder_name,trainer,config):
     psd,psd_idx = load_psd(folder_name,trainer,config)
     if config['ASYMMETRY']['DO']: cal_asymmetry_score(folder_name,trainer,config,psd,psd_idx)
+    if config['TTEST']['DO']: cal_t_score(folder_name,trainer,config,psd,psd_idx)
+
+def cal_t_score(folder_name,trainer,config,psd,psd_idx):
+    # TODO: 
+    for term in trainer.dataset.eeg_data.keys():
+        for event in trainer.dataset.eeg_data[term].keys():
+            psd[f'{term}_{event}'] = psd[f'{term}_{event}']
+    
 
 
 def get_statistical_beta(score,folder_name,trainer,config):
@@ -28,6 +41,8 @@ def get_statistical_beta(score,folder_name,trainer,config):
                                 if not idx_s1 == idx_s2])
             # standardize the data
             X = (X - X.mean(0)) / X.std(0)
+            print(X)
+            print(y)
             lr[f'{term}_{event}'] = pg.linear_regression(X,y,as_dataframe = False)
     lr_df = pd.DataFrame(lr).T
     lr_df.to_csv(os.path.join(config['SAVE_PATH'],f'{folder_name}_lr.csv'))
@@ -57,6 +72,44 @@ def get_statistical_beta_all(score,folder_name,trainer,config):
     lr = pg.linear_regression(X,y)
     lr['names'] = X_name
     lr.to_csv(os.path.join(config['SAVE_PATH'],f'{folder_name}_lr_all.csv'))
+    X_train,X_test,y_train,y_test = train_test_split(X,y,test_size = config['XGBOOST']['test_rate'],random_state=config['XGBOOST']['split_random_state'])
+    model = XGBRegressor(**config['XGBOOST']['kwargs']).fit(X_train,y_train)
+    set_model = {'model':model,'X_train':X_train,'X_test':X_test,'y_train':y_train,'y_test':y_test,'X_name':X_name}
+    savepkl(set_model,os.path.join(config['SAVE_PATH'],f'{folder_name}_xgboost_set_model.pkl'))
+
+
+def get_xgboost_result(score,folder_name,trainer,config):
+    subj_id_list = trainer.dataset.used_id
+    y = np.stack([trainer.social_network_feature[np.int(idx_s2)].loc[trainer.social_network_feature['ID']==np.int(idx_s1)].values[0] 
+                        for idx_s1 in subj_id_list 
+                        for idx_s2 in subj_id_list 
+                        if not idx_s1 == idx_s2])
+    X = []
+    X_name = ['Intercept']
+    for term in trainer.dataset.eeg_data.keys():
+        for event in trainer.dataset.eeg_data[term].keys():
+            X.append(np.stack([np.concatenate([score[f'{term}_{event}'][idx_s1],score[f'{term}_{event}'][idx_s2]]) 
+                                for idx_s1 in range(score[f'{term}_{event}'].shape[0]) 
+                                for idx_s2 in range(score[f'{term}_{event}'].shape[0]) 
+                                if not idx_s1 == idx_s2]))
+            X_name.append(f'{term}_{event}_A')
+            X_name.append(f'{term}_{event}_B')
+    X = np.concatenate(X,axis=1)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=config['XGBOOST']['split_random_state'])
+    # standardize the data
+    if config['XGBOOST']['standardize']:
+        Ssc = StandardScaler()
+        X_train = Ssc.fit_transform(X_train)
+        X_test = Ssc.transform(X_test)
+    # train the model by Bayesian optimization
+    if config['XGBOOST']['bayesian_optimization']:
+        pass
+        
+
+
+
+
+
 def cal_asymmetry_score(folder_name,trainer,config,psd,psd_idx):
     asymmetry_score = {}
     for term in trainer.dataset.eeg_data.keys():
@@ -68,8 +121,9 @@ def cal_asymmetry_score(folder_name,trainer,config,psd,psd_idx):
             psd_left = psd[f'{term}_{event}'][:,channel_left].mean(1)
             psd_right = psd[f'{term}_{event}'][:,channel_right].mean(1)
             asymmetry_score[f'{term}_{event}'] = np.log(psd_right).reshape(-1,1) - np.log(psd_left).reshape(-1,1)
-    # get_statistical_beta(asymmetry_score,folder_name,trainer,config['ASYMMETRY'])
+    get_statistical_beta(asymmetry_score,folder_name,trainer,config['ASYMMETRY'])
     get_statistical_beta_all(asymmetry_score,folder_name,trainer,config['ASYMMETRY'])
+
 def load_psd(folder_name,trainer,config):
     psd = {}
     for term in trainer.dataset.eeg_data.keys():
