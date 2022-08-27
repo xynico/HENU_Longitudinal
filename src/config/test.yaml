@@ -38,7 +38,7 @@ PROCESSING:
     FILTER:
       DO: True
       hp: &hp 1
-      lp: &lp 40
+      lp: &lp 70
     NOTCH_FILTER:
       DO: True
       freq: 50
@@ -86,13 +86,13 @@ PROCESSING:
   
   REGRESSION:
     EEG_OVO:
-      DO: True
+      DO: False
       SAVE_PATH: !join [*FOLDER_PATH, /EEG_regression]
       # EEG_FEATURE: {PSD: *PSD, FUNCTIONALCONNECTIVITY: *FUNCTIONALCONNECTIVITY}
       EEG_FEATURE: {PSD: *PSD}
       EEG_FEATURE_PATH: *FEATURE_PATH
       PRETRAIN: True
-      CHANNEL_SELECION: channel # all,channel, or a list of channel idx
+      CHANNEL_SELECION: all # all,channel, or a list of channel idx
       MODEL:
         model_type: XGBRegressor
         standardize: True
@@ -111,9 +111,6 @@ PROCESSING:
             verbose: 0
             refit: True
             random_state: *seed
-            
-              
-
         VISUALIZATION: True    
 
     SURVEY_OVO:
@@ -130,27 +127,6 @@ PROCESSING:
         # all means: try every combination of features to predict the relationship. !!!! OUT OF MEMORY !!!! NOT RECOMMENDED !!!
         # list means: try every combination of features in the list to predict the relationship.
       PRETRAIN: True
-      # MODEL:
-      #   model_type: LinearRegression
-      #   standardize: True
-      #   test_rate: 0.2
-      #   split_random_state: *seed
-      #   kwargs: {n_jobs: *n_jobs}
-      #   VISUALIZATION: False
-        # MODEL:
-        #   model_type: Ridge
-        #   standardize: True
-        #   test_rate: 0.2
-        #   split_random_state: *seed
-        #   kwargs: {random_state: *seed}
-        #   VISUALIZATION: True
-        # MODEL:
-        #   model_type: svm.SVR
-        #   standardize: True
-        #   test_rate: 0.2
-        #   split_random_state: *seed
-        #   kwargs: {kernel: rbf,cache_size: 1000}
-        #   VISUALIZATION: True
       MODEL:
         model_type: XGBRegressor
         standardize: True
@@ -158,6 +134,32 @@ PROCESSING:
         split_random_state: *seed
         kwargs: {verbosity: 0, objective: reg:squarederror}
         VISUALIZATION: True
+    AIO:
+      DO: False
+      SAVE_PATH: !join [*FOLDER_PATH, /AIO_regression]
+      EEG_FEATURE: {PSD: *PSD}
+      EEG_FEATURE_PATH: *FEATURE_PATH
+      PRETRAIN: False
+      CHANNEL_SELECION: all # all
+      MODEL:
+        model_type: XGBRegressor
+        standardize: True
+        test_rate: 0.2
+        split_random_state: [187] # list of random seeds
+        kwargs: {verbosity: 0, objective: reg:squarederror}
+        VISUALIZATION: True
+        BayesianOptimization:
+          DO: True
+          search_spaces: search_spaces_xgboost
+          kwargs:
+            cv: 5
+            scoring: r2
+            n_jobs: *n_jobs
+            n_iter: 100
+            n_points: 3
+            verbose: 1
+            refit: True
+            random_state: *seed
 STATISTIC:
   # TODO: add the following statistics
   TTEST:
@@ -167,7 +169,7 @@ STATISTIC:
     kwargs:
       permutations: 1000
   ASYMMETRY:
-    DO: True
+    DO: False
     SEED: *seed
     SAVE_PATH: !join [*FOLDER_PATH, /statistic/alpha_asymmetry]
     Band: [8,14]
@@ -192,8 +194,5 @@ STATISTIC:
           verbose: 0
           refit: True
           random_state: *seed
-
-
-    
-      
-    
+POSTPROCESSING:
+  REGRESSION:

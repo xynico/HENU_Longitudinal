@@ -10,18 +10,8 @@ import matplotlib.pyplot as plt
 from search_spaces import *
 
 
-def post_EEG_feature_extraction(folder_name,trainer,config):
-    # xgboost_feature_importance(folder_name,trainer,config)
+def post_EEG(folder_name,trainer,config):
     pass
 
-def xgboost_feature_importance(folder_name,trainer,config):
-    '''
-    Extract the feature importance from the model
-    '''
-    print('Extracting feature importance')
-    fscore = {term: {} for term in trainer.dataset.eeg_data.keys()}
-    for term in trainer.dataset.eeg_data.keys():
-        for model_name in trainer.model[term].keys():
-            fscore[term][model_name] = trainer.model[term][model_name].get_booster().get_score(fmap='', importance_type='weight')
-            print(f"E {trainer.model[term][model_name].get_booster().get_score(fmap='', importance_type='weight')}" )
-            raise NotImplementedError
+def corr_psd_sr(folder_name,trainer,config):
+    pass

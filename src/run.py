@@ -23,7 +23,8 @@ def main():
     EEG_social_network_loop(folder_name,dataset,config['PROCESSING']['EEG_SOCIAL_NETWORK'])
     EEG_dr_trainer = EEG_Regression_trainer(folder_name,dataset,config['PROCESSING']['REGRESSION']['EEG_OVO'])
     survey_dr_trainer = Survey_Regression_trainer(folder_name,dataset,config['PROCESSING']['REGRESSION']['SURVEY_OVO'])
-    post_EEG_feature_extraction(folder_name,EEG_dr_trainer,config)
+    AIO_trainer = EEG_all_in_one_model_trainer(folder_name,dataset,config['PROCESSING']['REGRESSION']['AIO'])
+    post_EEG(folder_name,EEG_dr_trainer,config)
     statistic_all_in_one(folder_name,EEG_dr_trainer,config['STATISTIC'])
 
 

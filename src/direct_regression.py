@@ -10,12 +10,12 @@ from sklearn import svm
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score,mean_squared_error
 from itertools import combinations
 from skopt import BayesSearchCV
 from search_spaces import *
 from sklearn.model_selection import cross_val_score
-
+    
 
 class EEG_Regression_trainer():
 
@@ -181,10 +181,20 @@ class EEG_Regression_trainer():
             model = model.fit(X_train,y_train)
             return model
 
-    def split_train_val(self,X,y):
-        X_train,X_val,y_train,y_val = train_test_split(X,y,test_size=self.config['MODEL']['test_rate'],
-                                                random_state=self.config['MODEL']['split_random_state'])
-        return X_train,X_val,y_train,y_val
+    def split_train_val(self,X,y,X_key = None,stratify=None,random_state = None):
+        if random_state is None:
+            random_state = self.config['MODEL']['split_random_state']
+        if X_key is None:
+            X_train,X_val,y_train,y_val = train_test_split(X,y,test_size=self.config['MODEL']['test_rate'],
+                                                    random_state=random_state,stratify=stratify)
+            return X_train,X_val,y_train,y_val
+        else:
+            X_train,X_val,y_train,y_val,X_key_train,X_key_val = train_test_split(X,y,X_key,test_size=self.config['MODEL']['test_rate'],
+                                                    random_state=random_state,stratify=stratify)
+            return X_train,X_val,y_train,y_val,X_key_train,X_key_val
+            
+
+        
 
     
 class Survey_Regression_trainer(EEG_Regression_trainer):
@@ -290,4 +300,126 @@ class Survey_Regression_trainer(EEG_Regression_trainer):
         model.fit(X_train,y_train)
         return model
 
+class EEG_all_in_one_model_trainer(EEG_Regression_trainer):
+    def __init__(self,folder_name,dataset,config):
+        self.dataset = dataset
+        self.config = config
+        self.folder_name = folder_name
+        if self.config['DO']:
+            self.load_EEG_feature()
+            self.load_social_network()
+            self.AIO_regression()
     
+    def AIO_regression(self):
+        check_path(os.path.join(self.config['SAVE_PATH'],self.folder_name))
+        self.EEG_model_loop()
+
+    def inital_model(self):
+        self.model = {}
+        if self.config['MODEL']['BayesianOptimization']['DO']:
+            self.Bayesopt_model = {}
+
+    def EEG_model_loop(self):
+        self.inital_model()
+        term_list = ['final_eye_close','final_eye_open','midterm_eye_close','midterm_eye_open']
+        self.r2_score = {}
+        self.mse_score = {}
+        self.corr_score = {}
+        for EEG_method in self.config['EEG_FEATURE']:
+            self.r2_score[EEG_method] = {}
+            self.mse_score[EEG_method] = {}
+            self.corr_score[EEG_method] = {}
+            self.model[EEG_method] = {}
+            if self.config['MODEL']['BayesianOptimization']['DO']: self.Bayesopt_model[EEG_method] = {}
+            X_all = []
+            y_all = []
+            X_key_all = []
+            for term in self.dataset.eeg_data.keys():
+                for event in self.dataset.eeg_data[term].keys():
+                    EEG_data = np.stack(self.EEG_feature[term][f"{event}_{EEG_method}"])
+                    subj_id_list = self.dataset.used_id
+                    X = np.stack([np.concatenate([EEG_data[idx_s1],EEG_data[idx_s2]]) 
+                                    for idx_s1 in range(EEG_data.shape[0]) 
+                                    for idx_s2 in range(EEG_data.shape[0]) 
+                                    if not idx_s1 == idx_s2])
+                    y = np.stack([self.social_network_feature[np.int(idx_s2)].loc[self.social_network_feature['ID']==np.int(idx_s1)].values[0] 
+                                    for idx_s1 in subj_id_list 
+                                    for idx_s2 in subj_id_list 
+                                    if not idx_s1 == idx_s2])
+                    X_key = np.stack([f"{term}_{event}_{idx_s1 < idx_s2}"
+                                    for idx_s1 in range(EEG_data.shape[0]) 
+                                    for idx_s2 in range(EEG_data.shape[0])
+                                    if not idx_s1 == idx_s2])
+                    X_all.append(X)
+                    y_all.append(y)
+                    X_key_all.append(X_key)
+            X_all = np.concatenate(X_all,axis=0)
+            y_all = np.concatenate(y_all,axis=0)
+            X_key_all = np.concatenate(X_key_all,axis=0)
+            
+            for random_seed in tqdm(self.config['MODEL']['split_random_state'],desc=f"{EEG_method}_{self.config['MODEL']['model_type']}"):
+                X_train,X_val,y_train,y_val,X_key_train,X_key_val = self.split_train_val(X_all,y_all,X_key = X_key_all,stratify = X_key_all,random_state = random_seed)
+                if self.config['MODEL']['standardize']: X_train,X_val = standardize(X_train,X_val)
+                savepkl({'X_train':X_train,'X_val':X_val,'y_train':y_train,'y_val':y_val,'X_key_train':X_key_train,'X_key_val':X_key_val,'EEG_featuremap':self.EEG_feature_map},
+                    os.path.join(self.config['SAVE_PATH'],self.folder_name,
+                        f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_Dataset.pkl"))
+                if self.config['MODEL']['BayesianOptimization']['DO']:
+                    if self.config['PRETRAIN']:
+                        if os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_BayesOpt.pkl")):
+                            self.Bayesopt_model[EEG_method][random_seed] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_BayesOpt.pkl"))
+                            self.model[EEG_method][random_seed] = self.Bayesopt_model[EEG_method][random_seed].best_estimator_
+                        else:
+                            self.Bayesopt_model[EEG_method][random_seed] = self.EEG_model_fit(X_train,y_train)
+                            savepkl(self.Bayesopt_model[EEG_method][random_seed],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_BayesOpt.pkl"))
+                            self.model[EEG_method][random_seed] = self.Bayesopt_model[EEG_method][random_seed].best_estimator_
+                            savepkl(self.model[EEG_method][random_seed],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_model.pkl"))
+                        
+                    else:
+                        self.Bayesopt_model[EEG_method][random_seed] = self.EEG_model_fit(X_train,y_train)
+                        savepkl(self.Bayesopt_model[EEG_method][random_seed],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_BayesOpt.pkl"))
+                        self.model[EEG_method][random_seed] = self.Bayesopt_model[EEG_method][random_seed].best_estimator_
+                        savepkl(self.model[EEG_method][random_seed],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_model.pkl"))
+                else:
+                    if self.config['PRETRAIN']:
+                        if os.path.exists(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_model.pkl")):
+                            self.model[EEG_method][random_seed] = loadpkl(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_model.pkl"))
+                        else:
+                            self.model[EEG_method][random_seed] = self.EEG_model_fit(X_train,y_train)
+                            savepkl(self.model[EEG_method][random_seed],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_model.pkl"))
+                    else:
+                        
+                        self.model[EEG_method][random_seed] =self.EEG_model_fit(X_train,y_train)
+                        savepkl(self.model[EEG_method][random_seed],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{random_seed}_model.pkl"))
+                self.r2_score[EEG_method][random_seed] = self.EEG_model_test(X_val,y_val,X_key_val,EEG_method,random_seed,method = 'r2')
+                self.mse_score[EEG_method][random_seed] = self.EEG_model_test(X_val,y_val,X_key_val,EEG_method,random_seed,method = 'mse')
+                self.corr_score[EEG_method][random_seed] = self.EEG_model_test(X_val,y_val,X_key_val,EEG_method,random_seed,method = 'corr')
+                self.score_summary(self.r2_score,method = 'r2')
+                self.score_summary(self.mse_score,method = 'mse')
+                self.score_summary(self.corr_score,method = 'corr')
+
+    def EEG_model_test(self,X_val,y_val,X_key_val,EEG_method,random_seed,method = 'r2'):
+        y_pred = self.model[EEG_method][random_seed].predict(X_val)
+        score = {}
+        for term in self.dataset.eeg_data.keys():
+            for event in self.dataset.eeg_data[term].keys():
+                idx = np.isin(X_key_val,f"{term}_{event}_True")+np.isin(X_key_val,f"{term}_{event}_False") != 0
+                if method == 'r2':
+                    score[f"{term}_{event}"] = r2_score(y_val[idx],y_pred[idx])
+                elif method == 'mse':
+                    score[f"{term}_{event}"] = mean_squared_error(y_val[idx],y_pred[idx])
+                elif method == 'corr':
+                    score[f"{term}_{event}"] = np.corrcoef(y_val[idx],y_pred[idx])[0,1]
+                if self.config['MODEL']['VISUALIZATION']:
+                    plt.figure(figsize=(10,10))
+                    plt.scatter(y_val[idx],y_pred[idx],s=1,c='r')
+                    plt.xlabel('True')
+                    plt.ylabel('Predicted')
+                    plt.title(f'True vs Predicted with score = {method}_{score}_{term}_{event}')
+                    plt.savefig(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{EEG_method}_{term}_{event}_true_vs_predicted.png"))
+                    plt.close()
+        return score
+    def score_summary(self,score,method = 'r2'):
+        INDEX = list(score.keys())
+        VALUE = list(score.values())
+        score_summary = pd.DataFrame({"index":INDEX,"value":VALUE})
+        score_summary.to_csv(os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{method}_score.csv"),index=False)
