@@ -37,8 +37,8 @@ PROCESSING:
       sfreq: 500
     FILTER:
       DO: True
-      hp: &hp 8
-      lp: &lp 14
+      hp: &hp 1
+      lp: &lp 40
     NOTCH_FILTER:
       DO: True
       freq: 50
@@ -92,7 +92,7 @@ PROCESSING:
       EEG_FEATURE: {PSD: *PSD}
       EEG_FEATURE_PATH: *FEATURE_PATH
       PRETRAIN: True
-      CHANNEL_SELECION: channel # all,channel, or a list of channel idx
+      CHANNEL_SELECION: all # all,channel, or a list of channel idx
       MODEL:
         model_type: XGBRegressor
         standardize: True
@@ -135,8 +135,8 @@ PROCESSING:
         kwargs: {verbosity: 0, objective: reg:squarederror}
         VISUALIZATION: True
     AIO:
-      DO: False
-      SAVE_PATH: !join [*FOLDER_PATH, /AIO_regression]
+      DO: True
+      SAVE_PATH: !join [*FOLDER_PATH, /AIO_regression_baseline]
       EEG_FEATURE: {PSD: *PSD}
       EEG_FEATURE_PATH: *FEATURE_PATH
       PRETRAIN: False
@@ -149,7 +149,7 @@ PROCESSING:
         kwargs: {verbosity: 0, objective: reg:squarederror}
         VISUALIZATION: True
         BayesianOptimization:
-          DO: True
+          DO: False
           search_spaces: search_spaces_xgboost
           kwargs:
             cv: 5
@@ -171,16 +171,16 @@ STATISTIC:
   ASYMMETRY:
     DO: True
     SEED: *seed
-    SAVE_PATH: !join [*FOLDER_PATH, /statistic/alpha_asymmetry_P]
+    SAVE_PATH: !join [*FOLDER_PATH, /statistic/alpha_asymmetry_baseline]
     Band: [8,14]
-    # CHANNEL_MAP: {left: [Fp1,F3,C3,P3,O1,F7,T7,P7,FC1,CP1,FC5,CP5,FT9,TP9,],
-    #               right: [Fp2,F4,C4,P4,O2,F8,T8,P8,FC2,CP2,FC6,CP6,FT10,TP10]}
+    CHANNEL_MAP: {left: [Fp1,F3,C3,P3,O1,F7,T7,P7,FC1,CP1,FC5,CP5,FT9,TP9,],
+                  right: [Fp2,F4,C4,P4,O2,F8,T8,P8,FC2,CP2,FC6,CP6,FT10,TP10]}
 
     # CHANNEL_MAP: {left: [Fp1,F3,F7,FC1,FC5,FT9],
     #               right:[Fp2,F4,F8,FC2,FC6,FT10]}
 
-    CHANNEL_MAP: {left: [C3,P3,T7,P7,CP1,CP5,TP9],
-                  right:[C4,P4,T8,P8,CP2,CP6,TP10]}
+    # CHANNEL_MAP: {left: [C3,P3,T7,P7,CP1,CP5,TP9],
+    #               right:[C4,P4,T8,P8,CP2,CP6,TP10]}
 
     CHANNEL_LIST: [Fp1,Fp2,F3,F4,C3,C4,P3,P4,O1,O2,F7,F8,T7,T8,P7,P8,Fz,Cz,Pz,FC1,FC2,CP1,CP2,FC5,FC6,CP5,CP6,FT9,FT10,TP9,TP10]
     XGBOOST:
@@ -188,17 +188,18 @@ STATISTIC:
       standardize: True
       test_rate: 0.2
       split_random_state: *seed
-      kwargs: {verbosity: 0, objective: reg:squarederror, n_jobs: *n_jobs, random_state: *seed, n_estimators: 1000}
+      kwargs: {verbosity: 0, objective: reg:squarederror, random_state: *seed}
       # TODO: !!
       BayesianOptimization:
         DO: False
         search_spaces: search_spaces_xgboost
         kwargs:
-          cv: 10
+          cv: 5
           scoring: r2
           n_jobs: *n_jobs
           n_iter: 100
-          verbose: 0
+          n_points: 3
+          verbose: 1
           refit: True
           random_state: *seed
 POSTPROCESSING:

@@ -8,6 +8,7 @@ from sklearn.metrics import r2_score
 from sklearn.preprocessing import StandardScaler
 from skopt import BayesSearchCV
 import shap
+from search_spaces import *
 def statistic_all_in_one(folder_name,trainer,config):
     psd,psd_idx = load_psd(folder_name,trainer,config)
     if config['ASYMMETRY']['DO']: cal_asymmetry_score(folder_name,trainer,config,psd,psd_idx)
@@ -41,8 +42,6 @@ def get_statistical_beta(score,folder_name,trainer,config):
                                 if not idx_s1 == idx_s2])
             # standardize the data
             X = (X - X.mean(0)) / X.std(0)
-            print(X)
-            print(y)
             lr[f'{term}_{event}'] = pg.linear_regression(X,y,as_dataframe = False)
     lr_df = pd.DataFrame(lr).T
     lr_df.to_csv(os.path.join(config['SAVE_PATH'],f'{folder_name}_lr.csv'))
@@ -66,15 +65,34 @@ def get_statistical_beta_all(score,folder_name,trainer,config):
                                 if not idx_s1 == idx_s2]))
             X_name.append(f'{term}_{event}_A')
             X_name.append(f'{term}_{event}_B')
+
+    X_key = np.stack([f"{idx_s1 < idx_s2}"
+                        for idx_s1 in range(score[f'{term}_{event}'].shape[0]) 
+                        for idx_s2 in range(score[f'{term}_{event}'].shape[0])
+                        if not idx_s1 == idx_s2])
+
     X = np.concatenate(X,axis=1)
+    print(X.shape,X_key.shape)
     # standardize the data
     X = (X - X.mean(0)) / X.std(0)
     lr = pg.linear_regression(X,y)
     lr['names'] = X_name
     lr.to_csv(os.path.join(config['SAVE_PATH'],f'{folder_name}_lr_all.csv'))
-    X_train,X_test,y_train,y_test = train_test_split(X,y,test_size = config['XGBOOST']['test_rate'],random_state=config['XGBOOST']['split_random_state'])
-    model = XGBRegressor(**config['XGBOOST']['kwargs']).fit(X_train,y_train)
-    set_model = {'model':model,'X_train':X_train,'X_test':X_test,'y_train':y_train,'y_test':y_test,'X_name':X_name}
+
+    X_train,X_test,y_train,y_test,X_key_train,X_key_val = train_test_split(X,y,X_key,
+                                test_size = config['XGBOOST']['test_rate'],
+                                random_state=config['XGBOOST']['split_random_state'],
+                                stratify = X_key)
+    if config['XGBOOST']['BayesianOptimization']['DO']:
+        search_spaces = eval(config['XGBOOST']['BayesianOptimization']['search_spaces'])
+        model = XGBRegressor(**config['XGBOOST']['kwargs'])
+        bayes_cv_tuner = BayesSearchCV(estimator = model,search_spaces = search_spaces,**config['XGBOOST']['BayesianOptimization']['kwargs'])
+        bayes_cv_tuner.fit(X_train,y_train)
+        model = bayes_cv_tuner.best_estimator_
+        set_model = {'model':model,'X_train':X_train,'X_test':X_test,'y_train':y_train,'y_test':y_test,'X_name':X_name,'bayes_cv_tuner':bayes_cv_tuner}
+    else:
+        model = XGBRegressor(**config['XGBOOST']['kwargs']).fit(X_train,y_train)
+        set_model = {'model':model,'X_train':X_train,'X_test':X_test,'y_train':y_train,'y_test':y_test,'X_name':X_name}
     savepkl(set_model,os.path.join(config['SAVE_PATH'],f'{folder_name}_xgboost_set_model.pkl'))
 
 

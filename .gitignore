@@ -9,4 +9,6 @@
 /statistic
 /AIO_regression
 /figs
+/AIO_regression_baseline
+.gitignore
 /figs_final
