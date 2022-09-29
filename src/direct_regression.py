@@ -78,6 +78,7 @@ class EEG_Regression_trainer():
                         self.model[term][EEG_method] =self.EEG_model_fit(X_train,y_train)
                         savepkl(self.model[term][EEG_method],os.path.join(self.config['SAVE_PATH'],self.folder_name,f"{self.config['MODEL']['model_type']}_{term}_{EEG_method}_model.pkl"))
                     self.r2_score[f"{term}_{EEG_method}"] = self.EEG_model_test(X_val,y_val,term,EEG_method)
+                    self.r2_score[f"{term}_{EEG_method}"] = self.EEG_model_test(X_val,y_val,term,EEG_method)
                 self.r2_summary()
 
     def r2_summary(self):
